@@ -10,6 +10,10 @@ import (
 	"path/filepath"
 )
 
+type TemplateData struct {
+	Name string `json:"name"`
+}
+
 func ExportWordToPDF(wordFilePath, pdfOutputDir string) (string, error) {
 	libreofficePath := "C:\\Program Files\\LibreOffice\\program\\swriter.exe"
 	if _, err := os.Stat(libreofficePath); os.IsNotExist(err) {
@@ -35,6 +39,26 @@ func HandleConvertAndDownload(w http.ResponseWriter, r *http.Request) {
 
 	wordFilePath := "./test.docx"
 	pdfOutputDir := "./"
+
+	//template, err := docxt.OpenTemplate(wordFilePath)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+	//
+	//data := new(TemplateData)
+	//data = &TemplateData{
+	//	Name: "tessttttttt",
+	//}
+	//if err = template.RenderTemplate(data); err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+	//
+	//if err = template.Save("result.docx"); err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
 
 	pdfFilePath, err := ExportWordToPDF(wordFilePath, pdfOutputDir)
 	if err != nil {
