@@ -7,72 +7,101 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
+	"text/template"
 )
 
 type TemplateData struct {
-	Name string `json:"name"`
+	Name string
+	Mail string
+	Age  int64
 }
 
-func ExportWordToPDF(wordFilePath, pdfOutputDir string) (string, error) {
-	libreofficePath := "C:\\Program Files\\LibreOffice\\program\\swriter.exe"
-	if _, err := os.Stat(libreofficePath); os.IsNotExist(err) {
-		return "", fmt.Errorf("LibreOffice executable not found")
+func convertDocxToHtml(docxFilePath string) string {
+	libreOfficePath := "C:\\Program Files\\LibreOffice\\program\\soffice.exe"
+
+	cmd := exec.Command(libreOfficePath, "--headless", "--convert-to", "html", "--outdir", ".", docxFilePath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		log.Fatalf("Error converting DOCX to HTML: %v", err)
 	}
 
-	pdfFilePath := filepath.Join(pdfOutputDir, "test.pdf")
+	htmlFilePath := "test.html"
 
-	cmd := exec.Command(libreofficePath, "--convert-to", "pdf", "--outdir", pdfOutputDir, wordFilePath)
+	return htmlFilePath
+}
+
+func parseDataToHtml(htmlFilePath string) string {
+	data := TemplateData{
+		Name: "Minh",
+		Mail: "abc@gmail.com",
+		Age:  2,
+	}
+
+	tmpl, err := template.ParseFiles(htmlFilePath)
+	if err != nil {
+		panic(err)
+	}
+
+	templateFilePath := "result.html"
+	outputFile, err := os.Create(templateFilePath)
+	if err != nil {
+		panic(err)
+	}
+	defer outputFile.Close()
+
+	err = tmpl.Execute(outputFile, data)
+	if err != nil {
+		panic(err)
+	}
+
+	err = tmpl.Execute(os.Stdout, data)
+	if err != nil {
+		panic(err)
+	}
+
+	return templateFilePath
+}
+
+func ExportHTMLToPDF(htmlFilePath string) error {
+	libreofficePath := "C:\\Program Files\\LibreOffice\\program\\soffice.exe"
+	if _, err := os.Stat(libreofficePath); os.IsNotExist(err) {
+		return fmt.Errorf("LibreOffice executable not found")
+	}
+
+	cmd := exec.Command(libreofficePath, "--convert-to", "pdf", "--outdir", ".", htmlFilePath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("Error exporting Word to PDF: %s\nOutput: %s", err, string(output))
+		return fmt.Errorf("Error exporting HTML to PDF: %s\nOutput: %s", err, string(output))
 	}
 
-	return pdfFilePath, nil
+	return nil
 }
-
 func HandleConvertAndDownload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	wordFilePath := "./test.docx"
-	pdfOutputDir := "./"
+	wordFilePath := "test.docx"
+	pdfOutputDir := "result.pdf"
 
-	//template, err := docxt.OpenTemplate(wordFilePath)
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
-	//
-	//data := new(TemplateData)
-	//data = &TemplateData{
-	//	Name: "tessttttttt",
-	//}
-	//if err = template.RenderTemplate(data); err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
-	//
-	//if err = template.Save("result.docx"); err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
-
-	pdfFilePath, err := ExportWordToPDF(wordFilePath, pdfOutputDir)
+	htmlFilePath := convertDocxToHtml(wordFilePath)
+	resultPath := parseDataToHtml(htmlFilePath)
+	err := ExportHTMLToPDF(resultPath)
 	if err != nil {
 		http.Error(w, "Error exporting Word to PDF", http.StatusInternalServerError)
 		return
 	}
 
-	pdfFile, err := os.Open(pdfFilePath)
+	pdfFile, err := os.Open(pdfOutputDir)
 	if err != nil {
 		http.Error(w, "Error opening PDF file", http.StatusInternalServerError)
 		return
 	}
 	defer func() {
-		if err = os.Remove(pdfFilePath); err != nil {
+		if err = os.Remove(pdfOutputDir); err != nil {
 			log.Printf("Error removing temporary PDF file: %s", err)
 		}
 	}()
