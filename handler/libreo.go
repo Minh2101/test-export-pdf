@@ -86,7 +86,17 @@ func HandleConvertAndDownload(w http.ResponseWriter, r *http.Request) {
 	pdfOutputDir := "result.pdf"
 
 	htmlFilePath := convertDocxToHtml(wordFilePath)
+	defer func() {
+		if err := os.Remove(htmlFilePath); err != nil {
+			log.Printf("Error removing temporary PDF file: %s", err)
+		}
+	}()
 	resultPath := parseDataToHtml(htmlFilePath)
+	defer func() {
+		if err := os.Remove(resultPath); err != nil {
+			log.Printf("Error removing temporary PDF file: %s", err)
+		}
+	}()
 	err := ExportHTMLToPDF(resultPath)
 	if err != nil {
 		http.Error(w, "Error exporting Word to PDF", http.StatusInternalServerError)
