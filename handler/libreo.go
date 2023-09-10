@@ -7,13 +7,15 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"text/template"
 )
 
 type TemplateData struct {
-	Name string
-	Mail string
-	Age  int64
+	Name    string
+	Mail    string
+	Age     int64
+	TestArr []int64
 }
 
 func convertDocxToHtml(docxFilePath string) string {
@@ -27,16 +29,17 @@ func convertDocxToHtml(docxFilePath string) string {
 		log.Fatalf("Error converting DOCX to HTML: %v", err)
 	}
 
-	htmlFilePath := "test.html"
+	htmlFilePath := strings.ReplaceAll(docxFilePath, "docx", "html")
 
 	return htmlFilePath
 }
-
 func parseDataToHtml(htmlFilePath string) string {
+	arr := []int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 22, 2, 2, 2, 2, 2, 2, 2, 2, 3, 4, 4, 5, 5, 5, 6, 6, 6}
 	data := TemplateData{
-		Name: "Minh",
-		Mail: "abc@gmail.com",
-		Age:  2,
+		Name:    "<b><em>Minh</em></b>",
+		Mail:    "abc@gmail.com",
+		Age:     3,
+		TestArr: arr,
 	}
 
 	tmpl, err := template.ParseFiles(htmlFilePath)
@@ -56,11 +59,6 @@ func parseDataToHtml(htmlFilePath string) string {
 		panic(err)
 	}
 
-	err = tmpl.Execute(os.Stdout, data)
-	if err != nil {
-		panic(err)
-	}
-
 	return templateFilePath
 }
 
@@ -70,7 +68,7 @@ func ExportHTMLToPDF(htmlFilePath string) error {
 		return fmt.Errorf("LibreOffice executable not found")
 	}
 
-	cmd := exec.Command(libreofficePath, "--convert-to", "pdf", "--outdir", ".", htmlFilePath)
+	cmd := exec.Command(libreofficePath, "--headless", "--convert-to", "pdf", "--outdir", ".", htmlFilePath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("Error exporting HTML to PDF: %s\nOutput: %s", err, string(output))
